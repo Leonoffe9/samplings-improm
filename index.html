@@ -198,8 +198,9 @@ select.filter-select{
 .analysis-panel{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow)}
 .panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
 .panel-header h3{font-size:15px;font-weight:700}
-.panel-img{height:220px;overflow:hidden;background:#f0f0f0;display:flex;align-items:center;justify-content:center;position:relative}
-.panel-img img{width:100%;height:100%;object-fit:contain;padding:8px}
+.panel-img{height:220px;overflow:hidden;background:#f0f0f0;display:flex;align-items:center;justify-content:center;position:relative;flex-wrap:wrap;gap:8px}
+.panel-img img{object-fit:contain;padding:8px}
+#a-comp-img-container img{max-width:160px;max-height:160px;object-fit:contain}
 .panel-img-placeholder{font-size:64px;color:#ddd}
 .panel-body{padding:16px}
 .spec-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:13px}
@@ -547,7 +548,7 @@ table.pending-table tr:hover td{background:var(--primary-light)}
               <span class="badge-tag" id="a-comp-badge"></span>
               <h3 id="a-comp-name"></h3>
             </div>
-            <div class="panel-img" id="a-comp-img-container" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center"></div>
+            <div id="a-comp-img-container" style="height:220px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:8px;overflow:hidden"></div>
             <div class="panel-body">
               <div class="price-main" id="a-comp-price"></div>
               <div style="margin-top:10px;font-size:13px;color:var(--text-sec)">Precio competidor</div>
@@ -1036,11 +1037,20 @@ function renderAnalysis(){
   document.getElementById('a-comp-name').textContent = p.producto;
   // Mostrar todas las imágenes del competidor
   const compImgContainer = document.getElementById('a-comp-img-container');
-  compImgContainer.innerHTML = (p.imagenes && p.imagenes.length > 0)
-    ? p.imagenes.map(img => img && img.startsWith('http')
-        ? `<img src="${escHtml(img)}" alt="${escHtml(p.producto)}" style="max-height:150px;max-width:150px;object-fit:contain">`
-        : '').join('')
-    : '';
+  if(compImgContainer){
+    if(p.imagenes && p.imagenes.length > 0){
+      const imgHtml = p.imagenes
+        .filter(img => img && img.startsWith('http'))
+        .map(img => `<img src="${escHtml(img)}" alt="${escHtml(p.producto)}" style="max-height:160px;max-width:160px;object-fit:contain">`)
+        .join('');
+      compImgContainer.innerHTML = imgHtml;
+      console.log('✅ Imágenes renderizadas:', p.imagenes.length, 'elementos img creados:', compImgContainer.querySelectorAll('img').length);
+    } else {
+      compImgContainer.innerHTML = '<span style="color:var(--text-muted);font-size:14px">Sin imagen disponible</span>';
+    }
+  } else {
+    console.error('❌ No se encontró el contenedor a-comp-img-container');
+  }
   document.getElementById('a-comp-price').textContent = p.precioComp ? `$${fmtPrice(p.precioComp)}` : '—';
   // right panel – ours
   document.getElementById('a-simil-name').textContent = p.simil || 'Similitud no especificada';
