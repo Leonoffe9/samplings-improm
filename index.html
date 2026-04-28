@@ -547,7 +547,7 @@ table.pending-table tr:hover td{background:var(--primary-light)}
               <span class="badge-tag" id="a-comp-badge"></span>
               <h3 id="a-comp-name"></h3>
             </div>
-            <div class="panel-img"><img id="a-comp-img" src="" alt="" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div class="panel-img-placeholder" style="display:none">🖼️</div></div>
+            <div class="panel-img" id="a-comp-img-container" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center"></div>
             <div class="panel-body">
               <div class="price-main" id="a-comp-price"></div>
               <div style="margin-top:10px;font-size:13px;color:var(--text-sec)">Precio competidor</div>
@@ -559,7 +559,6 @@ table.pending-table tr:hover td{background:var(--primary-light)}
               <span class="badge-tag" style="background:var(--primary)">IMPROM</span>
               <h3 id="a-simil-name"></h3>
             </div>
-            <div class="panel-img"><img id="a-simil-img" src="" alt="" onerror="this.style.display='none';this.nextSibling.style.display='flex'"><div class="panel-img-placeholder" style="display:none">🖼️</div></div>
             <div class="panel-body">
               <div class="price-main" id="a-simil-price"></div>
               <div style="margin-top:10px;font-size:13px;color:var(--text-sec)">Nuestro precio</div>
@@ -1035,14 +1034,16 @@ function renderAnalysis(){
   cbadge.textContent = p.competidor;
   cbadge.className = `badge-tag ${comp.cls}`;
   document.getElementById('a-comp-name').textContent = p.producto;
-  const compImg = document.getElementById('a-comp-img');
-  if(p.imagen && p.imagen.startsWith('http')){ compImg.src=p.imagen; compImg.style.display=''; }
-  else compImg.style.display='none';
+  // Mostrar todas las imágenes del competidor
+  const compImgContainer = document.getElementById('a-comp-img-container');
+  compImgContainer.innerHTML = (p.imagenes && p.imagenes.length > 0)
+    ? p.imagenes.map(img => img && img.startsWith('http')
+        ? `<img src="${escHtml(img)}" alt="${escHtml(p.producto)}" style="max-height:150px;max-width:150px;object-fit:contain">`
+        : '').join('')
+    : '';
   document.getElementById('a-comp-price').textContent = p.precioComp ? `$${fmtPrice(p.precioComp)}` : '—';
   // right panel – ours
   document.getElementById('a-simil-name').textContent = p.simil || 'Similitud no especificada';
-  const similImg = document.getElementById('a-simil-img');
-  similImg.src=''; similImg.style.display='none';
   document.getElementById('a-simil-price').textContent = p.precioImprom ? `$${fmtPrice(p.precioImprom)}` : '—';
   // observations
   document.getElementById('analysis-obs').innerHTML = p.observaciones ? formatObs(p.observaciones) : '<em style="color:var(--text-muted)">Sin análisis disponible todavía.</em>';
