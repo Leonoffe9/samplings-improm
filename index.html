@@ -642,9 +642,7 @@ table.pending-table tr:hover td{background:var(--primary-light)}
               <!-- Product -->
               <div class="form-group full">
                 <label>1️⃣ Producto <span class="req">*</span></label>
-                <select class="form-control" id="req-product" required>
-                  <option value="">— Seleccioná un producto —</option>
-                </select>
+                <input type="text" class="form-control" id="req-product" placeholder="Escribe el nombre del producto" required>
                 <div class="product-preview" id="product-preview">
                   <img id="preview-img" src="" alt="">
                   <div class="product-preview-info">
@@ -652,24 +650,6 @@ table.pending-table tr:hover td{background:var(--primary-light)}
                     <small id="preview-simil"></small>
                   </div>
                 </div>
-              </div>
-              <!-- Quantity -->
-              <div class="form-group">
-                <label>2️⃣ Cantidad <span class="req">*</span></label>
-                <input type="number" class="form-control" id="req-qty" min="1" value="1" required>
-                <div class="stock-info" id="stock-info">Stock disponible: —</div>
-              </div>
-              <!-- Assignee -->
-              <div class="form-group">
-                <label>4️⃣ Responsable <span class="req">*</span></label>
-                <select class="form-control" id="req-assignee" required>
-                  <option value="">— Seleccioná —</option>
-                  <option>Ezequiel</option>
-                  <option>Marketing</option>
-                  <option>Comercial</option>
-                  <option>Diseño</option>
-                  <option>Producción</option>
-                </select>
               </div>
               <!-- Justification -->
               <div class="form-group full">
@@ -681,9 +661,14 @@ table.pending-table tr:hover td{background:var(--primary-light)}
                   <span class="char-count" id="char-count">0 / 10 mín</span>
                 </div>
               </div>
-              <!-- Estimated date -->
+              <!-- Product similar -->
+              <div class="form-group full">
+                <label>2️⃣ Producto similar con Promoprodutos <span class="req">*</span></label>
+                <input type="text" class="form-control" id="req-similar" placeholder="Nombre del producto similar" required>
+              </div>
+              <!-- Requested date -->
               <div class="form-group">
-                <label>5️⃣ Fecha estimada de entrega</label>
+                <label>3️⃣ Fecha solicitada</label>
                 <input type="date" class="form-control" id="req-date">
               </div>
               <!-- Priority -->
@@ -1204,26 +1189,20 @@ function buildProductDropdown(){
     sel.appendChild(o);
   });
 }
-document.getElementById('req-product').addEventListener('change',function(){
-  const val = this.value;
+document.getElementById('req-product').addEventListener('input',function(){
+  const val = this.value.trim().toLowerCase();
   const prev = document.getElementById('product-preview');
   if(!val){ prev.classList.remove('show'); state.selectedProductForRequest=null; validateForm(); return; }
-  let p = null;
-  if(val.startsWith('b')){
-    const idx = parseInt(val.substring(1));
-    p = state.products[idx];
-  } else if(val.startsWith('a')){
-    const idx = parseInt(val.substring(1));
-    p = state.analysisProducts[idx];
-  }
+
+  // Buscar producto por nombre
+  let p = state.products.find(x => x.producto.toLowerCase() === val);
+  if(!p) p = state.analysisProducts.find(x => x.producto.toLowerCase() === val);
+
   if(!p){ prev.classList.remove('show'); state.selectedProductForRequest=null; validateForm(); return; }
   state.selectedProductForRequest = p;
   document.getElementById('preview-img').src = (p.imagen&&p.imagen.startsWith('http'))?p.imagen:'';
   document.getElementById('preview-name').textContent = p.producto;
   document.getElementById('preview-simil').textContent = p.simil?`Similar a: ${p.simil}`:'';
-  document.getElementById('stock-info').textContent = `Stock disponible: ${p.stock||'?'} unidades`;
-  const qtyInput = document.getElementById('req-qty');
-  if(p.stock) qtyInput.max = p.stock;
   prev.classList.add('show');
   validateForm();
 });
@@ -1233,25 +1212,19 @@ document.getElementById('req-justification').addEventListener('input',function()
   document.getElementById('just-error').style.display = len>0&&len<10?'block':'none';
   validateForm();
 });
-document.getElementById('req-qty').addEventListener('input',validateForm);
-document.getElementById('req-assignee').addEventListener('change',validateForm);
+document.getElementById('req-similar').addEventListener('input',validateForm);
 function validateForm(){
   const product = document.getElementById('req-product').value;
-  const qty = parseInt(document.getElementById('req-qty').value);
+  const similar = document.getElementById('req-similar').value;
   const just = document.getElementById('req-justification').value.trim();
-  const assignee = document.getElementById('req-assignee').value;
-  const ok = product && qty>0 && just.length>=10 && assignee;
+  const ok = product && similar && just.length>=10;
   document.getElementById('btn-submit').disabled = !ok;
 }
 document.getElementById('request-form').addEventListener('submit',function(e){
   e.preventDefault();
-  const val = document.getElementById('req-product').value;
-  let p = null;
-  if(val.startsWith('b')){
-    p = state.products[parseInt(val.substring(1))];
-  } else if(val.startsWith('a')){
-    p = state.analysisProducts[parseInt(val.substring(1))];
-  }
+  const val = document.getElementById('req-product').value.trim().toLowerCase();
+  let p = state.products.find(x => x.producto.toLowerCase() === val);
+  if(!p) p = state.analysisProducts.find(x => x.producto.toLowerCase() === val);
   if(!p) return;
   const priority = document.querySelector('input[name="priority"]:checked').value;
   const newReq = {
@@ -1259,12 +1232,11 @@ document.getElementById('request-form').addEventListener('submit',function(e){
     fecha: new Date().toISOString().split('T')[0],
     producto: p.producto,
     competidor: p.competidor,
-    solicitadoPor: document.getElementById('req-assignee').value,
-    estado: 'en-transporte',
+    productoSimilar: document.getElementById('req-similar').value.trim(),
+    estado: 'pendiente',
     notas: document.getElementById('req-justification').value.trim(),
-    qty: parseInt(document.getElementById('req-qty').value),
     prioridad: priority,
-    fechaEstimada: document.getElementById('req-date').value,
+    fechaSolicitada: document.getElementById('req-date').value,
     tracking: '',
   };
   state.pending.unshift(newReq);
@@ -1276,7 +1248,6 @@ document.getElementById('request-form').addEventListener('submit',function(e){
 function clearForm(){
   document.getElementById('request-form').reset();
   document.getElementById('product-preview').classList.remove('show');
-  document.getElementById('stock-info').textContent='Stock disponible: —';
   document.getElementById('char-count').textContent='0 / 10 mín';
   document.getElementById('btn-submit').disabled=true;
   state.selectedProductForRequest=null;
@@ -1576,7 +1547,7 @@ async function writeRequestsToSheet(){
    INIT UI
 ═══════════════════════════════════════════ */
 function initUI(){
-  buildProductDropdown();
+  // buildProductDropdown(); // Ya no es necesario - el campo es un input de texto
   renderGrid();
   renderPending();
 }
